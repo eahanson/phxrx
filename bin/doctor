@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
+msg() {
+  color=$1
+  s=$2
+  flags=$3
+
+  echo -e ${flags} "${color}${s}${NC}"
+}
+
+check() {
+  description=$1
+  command=$2
+  remedy=$3
+
+  echo -n -e "${CYAN}Checking: ${description}${WHITE}... ${NC}"
+
+  if $command > ~doctor.out 2>&1
+  then
+    echo -e "${GREEN}OK${NC}"
+  else
+    echo -e "${RED}FAILED${NC}"
+    cat ~doctor.out
+    echo
+    echo -e "${CYAN}Remedy: ${YELLOW}${remedy}${NC}"
+    exit
+  fi
+}
+
+check "Elixir exists" \
+  "which elixir" \
+  "brew update && brew install elixir"
+
+check "Postgres launchctl script is linked" \
+  "ls -1 $HOME/Library/LaunchAgents/homebrew.mxcl.postgresql.plist" \
+  "ln -sfv /usr/local/opt/postgresql/*.plist ~/Library/LaunchAgents"
+
+check "Postgres is running" \
+  "psql -l" \
+  "launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist"
+
+check "Mix dependencies are up to date" \
+  "mix deps" \
+  "mix deps.get"
+
+check "Migrations are up to date" \
+  "mix ecto.migrations" \
+  "mix ecto.migrate"
